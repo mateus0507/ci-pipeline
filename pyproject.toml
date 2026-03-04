@@ -1,14 +1,39 @@
+# Define qual sistema será usado para construir o projeto
 [build-system]
+
+# Dependência necessária para realizar o build
 requires = ["setuptools>=61.0"]
+
+# Backend responsável por executar o processo de build
 build-backend = "setuptools.build_meta"
 
+
+
+# Informações do projeto
 [project]
+
+# Nome do projeto
 name = "ci_pipeline"
+
+# Versão atual
 version = "0.1.0"
-description = "Projeto exemplo para CI com lint, testes e build"
+
+# Descrição do projeto
+description = "Projeto exemplo para CI pipeline"
+
+# Versão mínima do Python necessária
 requires-python = ">=3.9"
+
+# Dependências da aplicação
 dependencies = []
 
+
+
+# Configuração do pytest
 [tool.pytest.ini_options]
+
+# Pasta onde o pytest deve procurar testes
 testpaths = ["tests"]
+
+# Executa os testes em modo silencioso
 addopts = "-q"
