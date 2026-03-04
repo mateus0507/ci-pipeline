@@ -133,3 +133,28 @@ jobs:
         with:
           name: dist
           path: dist/*
+        
+  # =============================
+  # JOB 4 - DEPLOY (CD)
+  # =============================
+  deploy:
+    name: Deploy application
+
+    # Só roda se o build passar
+    needs: [build]
+
+    runs-on: ubuntu-latest
+
+    # Só executa deploy quando o evento for push na branch main
+    # (ou seja: depois do merge na main)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      # Baixa o código do repositório no runner
+      - uses: actions/checkout@v4
+
+      # Deploy "simulado" (sem servidor real), só pra provar o CD
+      - name: Deploy
+        run: |
+          echo "Iniciando deploy..."
+          echo "Deploy concluído com sucesso na branch main!"
