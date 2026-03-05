@@ -1,0 +1,67 @@
+name: Up-to-date-main (required) #define o nome do workflow
+
+# Quer dizer: Crie um workflow chamado "Up-to-date-main (required)" que será executado sempre que um Pull Request tentar enviar código para a branch main
+# roda sempre que um PR(pull request) for aberto/atualizado apontando para a main
+on: #define o evento que vai disparar o workflow
+  pull_request: #Significa que o workflow será executado quando acontecer algo relacionado a um Pull Request.
+    branches: ["main"] #o workflow só roda se o PR está apontando para a main
+
+jobs: #defini os trabalhos que essa pipeline vai executar
+  up_to_date: #Identificador interno do job usado pelo workflow
+    name: up-to-date-main # Nome exibido no GitHub Actions para identificar o job durante a execução
+    runs-on: ubuntu-latest #Define o sistema operacional do runner onde o job será executado
+
+    steps: #define a sequencia de passos que o job vai executar
+
+      # 1) Baixa o codigo do PR (a branch do dev) para a VM do Actions
+      - name: Checkout PR branch #nome do passo
+        uses: actions/checkout@v4 #utiliza a action oficial do GitHub para clonar o repositorio no ambiente da pipeline
+        with: #define os parametros para a action
+          fetch-depth: 0 #baixa todo o historico do git, permitindo comparções corretas entre commits e branchs
+
+      # 2) Garante que temos a main atual (origin/main) para comparar
+      # A ação checkout baixa a branch do PR, mas a main pode não estar disponível localmente no runner.
+      # Então fazemos "git fetch" para trazer a referência origin/main e conseguir comparar.
+      - name: Fetch main #nome do passo
+        run: | #comando para ser executado no terminal do runner
+          # Atualiza a referência da main remota para comparação com o PR
+          # --prune remove refs remotas antigas | --no-tags evita baixar tags
+          # --prune remove refs antigas
+          # --no-tags acelera (não precisamos de tags)
+          git fetch --no-tags --prune origin main:refs/remotes/origin/main
+
+      # 3) Verifica se a branch do PR contem o ultimo commit da main
+      # Ideia:
+      # - Pegamos o "tip" da main (o commit mais recente da main)
+      # - Calculamos o merge-base entre a branch do PR (HEAD) e origin/main
+      # - Se o merge-base NÃO for igual ao tip da main, significa que o PR está atrás da main
+      - name: Fail if PR branch is behind main #nome do passo
+        run: | #comando para ser executado no terminal do runner
+
+          # Debug: imprime os hashes para facilitar entender o que está acontecendo
+          echo "=== Debug info ==="
+          echo "Main tip (origin/main): $(git rev-parse origin/main)" # retorna o hash do commit mais recente da main remota
+          echo "PR tip (HEAD):          $(git rev-parse HEAD)"        # representa o commit atual da branch do PR
+
+          # merge-base = último commit em comum entre a branch do PR e a main
+          # (ponto onde as duas histórias se encontram)
+          base=$(git merge-base HEAD origin/main)
+          main_tip=$(git rev-parse origin/main)
+
+          echo "Merge-base:             $base"
+          echo "======================="
+
+          # Regra:
+          # Se o merge-base NÃO for o tip da main,
+          # significa que a branch do PR NÃO inclui a main mais recente (está desatualizada).
+          if [ "$base" != "$main_tip" ]; then
+            echo "❌ BLOCKED: sua branch está ATRÁS da main."
+            echo ""
+            echo "Como resolver (você precisa trazer o último commit da main para sua branch):"
+            echo "  Opção 1 (merge):  git fetch origin && git merge origin/main && git push"
+            echo "  Opção 2 (rebase): git fetch origin && git rebase origin/main && git push --force-with-lease"
+            exit 1 # encerra com erro -> o job falha -> o PR fica bloqueado (se o check for obrigatório na proteção da branch)
+          fi
+
+          # Se chegou aqui, a branch do PR já contém o último commit da main
+          echo "✅ OK: sua branch contém o último commit da main."

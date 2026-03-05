@@ -1,8 +1,0 @@
-# Framework para rodar testes automatizados
-pytest
-
-# Ferramenta para análise de qualidade de código (lint)
-ruff
-
-# Ferramenta usada para gerar o build do projeto
-build
